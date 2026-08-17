@@ -1,0 +1,22 @@
+﻿# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+
+# Secrets/env
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+
+# OS
+.DS_Store
