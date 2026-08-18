@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  pubsub-emulator:
+    image: gcr.io/google.com/cloudsdktool/cloud-sdk:emulators
+    container_name: pubsub-emulator
+    ports:
+      - "8085:8085"
+    command: >
+      gcloud beta emulators pubsub start
+      --host-port=0.0.0.0:8085
+      --project=local-dev-project
+
+  # Placeholder for the sample log-generating app (Person B).
+  # Uncomment and fill in once the app has a Dockerfile.
+  # sample-app:
+  #   build: ../app/sample-app
+  #   container_name: sample-app
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+  #     - GOOGLE_CLOUD_PROJECT=local-dev-project
+  #   depends_on:
+  #     - pubsub-emulator
+
+  # Placeholder for the ingestion/parsing Cloud Function, run locally
+  # via the Functions Framework for testing before deploy.
+  # ingestion-function:
+  #   build: ../app/detection
+  #   container_name: ingestion-function
+  #   ports:
+  #     - "8081:8080"
+  #   environment:
+  #     - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+  #     - GOOGLE_CLOUD_PROJECT=local-dev-project
+  #   depends_on:
+  #     - pubsub-emulator
