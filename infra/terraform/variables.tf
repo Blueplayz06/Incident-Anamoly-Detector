@@ -9,3 +9,15 @@ variable "region" {
   type        = string
   default     = "us-west1"
 }
+
+variable "alert_email" {
+  description = "Email address to receive Cloud Monitoring alerts. Update with the team's actual monitoring email before applying."
+  type        = string
+  default     = "CHANGE-ME@example.com"
+}
+
+variable "error_alert_threshold" {
+  description = "Number of ERROR-level logs in a 60s window that triggers an alert. Starting value — tune once real sample-app traffic patterns are known."
+  type        = number
+  default     = 10
+}
