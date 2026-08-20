@@ -64,3 +64,51 @@ We chose **Pub/Sub + Cloud Functions**.
 **Kafka on GKE** — rejected for this project due to operational overhead
 disproportionate to project scale and timeline, despite team familiarity
 with both technologies.
+
+---
+
+# ADR 002: Deferred — Per-Component Service Accounts
+
+Status: Deferred (known limitation)
+Date: 2026-08-20
+
+## Context
+
+A security best practice for this kind of pipeline is giving each
+component (ingestion function, detection logic, dashboard, etc.) its own
+dedicated service account with narrowly scoped permissions, rather than
+having everything run under a shared/default identity. This was part of
+the original permissions plan.
+
+## Decision
+
+Per-component service accounts have **not** been implemented as of this
+ADR. All current Terraform resources use default/implicit service
+identities.
+
+## Reasoning
+
+This was a deliberate scoping decision under timeline pressure, not an
+oversight discovered late. A security audit of the repo (secret scanning,
+`.gitignore` coverage, credential file check) was completed and passed —
+no secrets or credentials are exposed. Per-component service accounts is
+additional IAM/Terraform work (one service account + scoped IAM bindings
+per component) that was prioritized below getting the core pipeline
+(ingestion, detection, alerting) working end-to-end first.
+
+## Consequences
+
+- Components currently share broader default permissions than strict
+  least-privilege would recommend.
+- This is safe for the current project scope (a demo/portfolio pipeline,
+  not a production system handling real user data), but would need to be
+  addressed before any real production use.
+
+## Future Work
+
+If time allows later in the project, or as a documented "what we'd do
+differently" item in the final report: create one service account per
+Cloud Function (ingestion, and any future detection/alerting functions),
+scope each to only the IAM roles it actually needs (e.g. the ingestion
+function needs BigQuery write access but not Pub/Sub admin), and update
+Terraform accordingly.
