@@ -19,9 +19,6 @@ from collections import deque
 
 from google.cloud import pubsub_v1
 
-from notifications import send_slack_alert
-from vertex_summary_stub import generate_incident_summary
-
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "local-dev-project")
 SUBSCRIPTION_ID = "log-ingestion-sub"
 
@@ -106,47 +103,25 @@ def compute_window_stats(logs: list[dict]) -> dict:
     }
 
 
-def check_anomaly(current_value: float, history: deque, label: str) -> dict:
-    """Returns a dict with is_anomaly, mean, z_score — used both to decide
-    whether to alert and to fill in the alert's actual numbers."""
+def check_anomaly(current_value: float, history: deque, label: str) -> bool:
+    """Returns True if current_value is a z-score anomaly vs. history."""
     if len(history) < 3:
-        return {"is_anomaly": False}  # not enough baseline data yet
+        return False  # not enough baseline data yet
 
     mean = statistics.mean(history)
     stdev = statistics.stdev(history) if len(history) > 1 else 0
 
     if stdev == 0:
-        return {"is_anomaly": False}  # no variance to compare against
+        return False  # no variance to compare against
 
     z_score = (current_value - mean) / stdev
 
     if z_score > Z_SCORE_THRESHOLD:
         print(f"🚨 ANOMALY — {label}: current={current_value:.2f}, "
               f"baseline_mean={mean:.2f}, z_score={z_score:.2f}")
-        return {"is_anomaly": True, "mean": mean, "z_score": z_score}
+        return True
 
-    return {"is_anomaly": False}
-
-
-def handle_anomaly(anomaly_type: str, current_value: float, result: dict):
-    """Generates a summary and sends a Slack alert for a confirmed anomaly."""
-    summary = generate_incident_summary(
-        service_name="all-services",  # global threshold, not per-service (docs/schema.md decision)
-        anomaly_type=anomaly_type,
-        current_value=current_value,
-        baseline_value=result["mean"],
-        z_score=result["z_score"],
-    )
-    print(f"  Summary: {summary}\n")
-
-    send_slack_alert(
-        service_name="all-services",
-        anomaly_type=anomaly_type,
-        current_value=current_value,
-        baseline_value=result["mean"],
-        z_score=result["z_score"],
-        summary=summary,
-    )
+    return False
 
 
 def run():
@@ -161,20 +136,12 @@ def run():
               f"avg_latency={stats['avg_latency']:.2f}ms, "
               f"error_rate={stats['error_rate']:.2%}")
 
-        latency_result = check_anomaly(
+        latency_anomaly = check_anomaly(
             stats["avg_latency"], latency_history, "latency"
         )
-        error_result = check_anomaly(
+        error_anomaly = check_anomaly(
             stats["error_rate"], error_rate_history, "error_rate"
         )
-
-        latency_anomaly = latency_result["is_anomaly"]
-        error_anomaly = error_result["is_anomaly"]
-
-        if latency_anomaly:
-            handle_anomaly("latency", stats["avg_latency"], latency_result)
-        if error_anomaly:
-            handle_anomaly("error_rate", stats["error_rate"], error_result)
 
         if not latency_anomaly and not error_anomaly and stats["count"] > 0:
             print("  (normal)")
