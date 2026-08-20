@@ -19,6 +19,9 @@ from collections import deque
 
 from google.cloud import pubsub_v1
 
+from notifications import send_slack_alert
+from vertex_summary import generate_incident_summary
+
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "local-dev-project")
 SUBSCRIPTION_ID = "log-ingestion-sub"
 
