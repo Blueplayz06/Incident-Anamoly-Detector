@@ -13,7 +13,7 @@ variable "region" {
 variable "alert_email" {
   description = "Email address to receive Cloud Monitoring alerts. Update with the team's actual monitoring email before applying."
   type        = string
-  default     = "CHANGE-ME@example.com"
+  default     = "devansh.nayak@ril.com"
 }
 
 variable "error_alert_threshold" {
