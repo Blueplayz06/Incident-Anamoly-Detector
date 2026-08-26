@@ -58,3 +58,30 @@ resource "google_bigquery_table" "logs_dead_letter" {
     field = "received_at"
   }
 }
+
+# --- Incidents table — every confirmed anomaly detection fires a row here ---
+# This is what the dashboard's "recent incidents" panel reads from. Written
+# to by anomaly_detector.py's handle_anomaly() function.
+
+resource "google_bigquery_table" "incidents" {
+  dataset_id = google_bigquery_dataset.logs.dataset_id
+  table_id   = "incidents"
+  project    = var.project_id
+
+  schema = jsonencode([
+    { name = "incident_id", type = "STRING", mode = "REQUIRED", description = "Unique ID for this incident" },
+    { name = "detected_at", type = "TIMESTAMP", mode = "REQUIRED" },
+    { name = "anomaly_type", type = "STRING", mode = "REQUIRED", description = "latency or error_rate" },
+    { name = "service_name", type = "STRING", mode = "REQUIRED", description = "Service the anomaly relates to — 'all-services' under the current global-threshold design" },
+    { name = "current_value", type = "FLOAT", mode = "REQUIRED" },
+    { name = "baseline_value", type = "FLOAT", mode = "REQUIRED" },
+    { name = "z_score", type = "FLOAT", mode = "REQUIRED" },
+    { name = "summary", type = "STRING", mode = "REQUIRED", description = "Generated incident summary (Vertex AI or templated fallback)" },
+    { name = "alert_sent", type = "BOOLEAN", mode = "REQUIRED", description = "Whether the Slack/email alert was successfully delivered" }
+  ])
+
+  time_partitioning {
+    type  = "DAY"
+    field = "detected_at"
+  }
+}
