@@ -346,3 +346,5 @@ for the reasoning and what a complete version would involve.
 
 - Confirmation that live GCP resource creation and API calls are cleared
   for the current project
+
+![Architecture diagram](docs/architecture-diagram.svg)
