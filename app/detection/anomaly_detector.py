@@ -35,6 +35,14 @@ BASELINE_WINDOW_COUNT = 6  # last ~60s of history
 # z-score above this triggers an anomaly flag.
 Z_SCORE_THRESHOLD = 3.0
 
+# --- Alert deduplication ---
+# Tracks whether each anomaly type is currently "active" (already alerted),
+# so an ongoing incident doesn't fire a new alert every single window.
+# Re-alerts only when the anomaly resolves (returns to normal) and then
+# recurs, or after ALERT_COOLDOWN_WINDOWS pass with it still active.
+ALERT_COOLDOWN_WINDOWS = 6  # ~60s at 10s/window — re-alert on a long-running incident periodically
+active_incidents = {"latency": 0, "error_rate": 0}  # value = windows since last alert (0 = not alerted / resolved)
+
 subscriber = pubsub_v1.SubscriberClient()
 publisher = pubsub_v1.PublisherClient()
 sub_path = subscriber.subscription_path(PROJECT_ID, SUBSCRIPTION_ID)
@@ -182,10 +190,29 @@ def run():
         latency_anomaly = latency_result["is_anomaly"]
         error_anomaly = error_result["is_anomaly"]
 
-        if latency_anomaly:
-            handle_anomaly("latency", stats["avg_latency"], latency_result)
-        if error_anomaly:
-            handle_anomaly("error_rate", stats["error_rate"], error_result)
+        for anomaly_type, is_anomaly, result in [
+            ("latency", latency_anomaly, latency_result),
+            ("error_rate", error_anomaly, error_result),
+        ]:
+            if is_anomaly:
+                windows_since_alert = active_incidents[anomaly_type]
+                if windows_since_alert == 0:
+                    # New incident (wasn't active last window) — alert now.
+                    handle_anomaly(anomaly_type, stats["avg_latency"] if anomaly_type == "latency" else stats["error_rate"], result)
+                    active_incidents[anomaly_type] = 1
+                elif windows_since_alert >= ALERT_COOLDOWN_WINDOWS:
+                    # Still ongoing after the cooldown period — re-alert once, then reset the counter.
+                    print(f"  (ongoing {anomaly_type} incident — re-alerting after cooldown)")
+                    handle_anomaly(anomaly_type, stats["avg_latency"] if anomaly_type == "latency" else stats["error_rate"], result)
+                    active_incidents[anomaly_type] = 1
+                else:
+                    # Already alerted, still within cooldown — suppress, just track.
+                    print(f"  (ongoing {anomaly_type} incident — alert suppressed, "
+                          f"{ALERT_COOLDOWN_WINDOWS - windows_since_alert} windows until re-alert)")
+                    active_incidents[anomaly_type] += 1
+            else:
+                # Resolved — reset so the next occurrence alerts immediately.
+                active_incidents[anomaly_type] = 0
 
         if not latency_anomaly and not error_anomaly and stats["count"] > 0:
             print("  (normal)")
