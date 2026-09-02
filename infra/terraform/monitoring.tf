@@ -49,7 +49,7 @@ resource "google_monitoring_alert_policy" "error_spike_alert" {
     display_name = "Error log count above threshold"
 
     condition_threshold {
-      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.error_log_count.name}\""
+      filter          = "resource.type=\"global\" AND metric.type=\"logging.googleapis.com/user/${google_logging_metric.error_log_count.name}\""
       comparison      = "COMPARISON_GT"
       threshold_value = var.error_alert_threshold
       duration        = "60s"
