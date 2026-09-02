@@ -1,4 +1,4 @@
-terraform {
+	terraform {
   required_version = ">= 1.5.0"
 
   required_providers {
@@ -14,7 +14,7 @@ terraform {
   # do not run `terraform init` against this backend until that bucket
   # actually exists.
   backend "gcs" {
-    bucket = "REPLACE-WITH-YOUR-TFSTATE-BUCKET-NAME"
+    bucket = "jio-cloud-training-tfstate"
     prefix = "terraform/state"
   }
 }
