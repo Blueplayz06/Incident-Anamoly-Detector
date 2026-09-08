@@ -1,11 +1,17 @@
 """
-Generates a natural-language incident summary from anomaly data using
-Vertex AI (Gemini).
+Generates a natural-language incident summary from anomaly data.
 
-NOTE: written but not yet run against live GCP — pending confirmation
-it's safe to make live API calls on the jio-cloud-training project (see
-team notes on the cybersecurity review). Test with USE_LIVE_VERTEX_AI=false
-(default) until cleared, which uses the templated fallback instead.
+Primary path: a deterministic, rule-based summary generator (no external
+dependency, no API cost, works identically every time). This is the
+default and the design this project ships with.
+
+Optional enhancement: a real Vertex AI (Gemini) call can be enabled via
+USE_LIVE_VERTEX_AI=true. As of testing on 2026-09-02, this project's
+GCP setup does not have full generative-model API access enabled, and
+model availability/naming for Gemini also changes over time — so this
+path is best-effort and not currently verified working. If it's ever
+enabled and the call fails for any reason, this module automatically
+falls back to the rule-based generator, so the pipeline never breaks.
 """
 
 import os
@@ -13,8 +19,9 @@ import os
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "jio-cloud-training")
 REGION = os.environ.get("VERTEX_AI_REGION", "us-west1")  # matches the org's resourceLocations constraint
 
-# Safety switch — defaults to the templated fallback until explicitly
-# enabled. Flip to "true" only once cleared to make live GCP calls.
+# Off by default. This project's rule-based generator is the primary,
+# supported path — see module docstring. Only enable this once Vertex AI
+# generative-model access is confirmed working for this project.
 USE_LIVE_VERTEX_AI = os.environ.get("USE_LIVE_VERTEX_AI", "false").lower() == "true"
 
 _model = None
@@ -29,7 +36,7 @@ def _get_model():
         from vertexai.generative_models import GenerativeModel
 
         vertexai.init(project=PROJECT_ID, location=REGION)
-        _model = GenerativeModel("gemini-1.5-flash")
+        _model = GenerativeModel("gemini-1.5-flash")  # TESTING: try alternate model names if this 404s
     return _model
 
 
@@ -48,10 +55,11 @@ def _build_prompt(service_name: str, anomaly_type: str, current_value: float,
     )
 
 
-def _templated_fallback(service_name: str, anomaly_type: str, current_value: float,
+def _rule_based_summary(service_name: str, anomaly_type: str, current_value: float,
                          baseline_value: float, z_score: float) -> str:
-    """Same templated logic as the original stub — used when live Vertex AI
-    is disabled or the API call fails, so the pipeline never breaks."""
+    """The primary summary generator for this project — deterministic,
+    no external dependency. Used directly by default, and also used as
+    the automatic fallback if a live Vertex AI call is enabled but fails."""
     if anomaly_type == "latency":
         severity = "significant" if z_score > 5 else "moderate"
         return (
@@ -90,15 +98,15 @@ def generate_incident_summary(
     z_score: float,
 ) -> str:
     """
-    Same signature as the original stub — anomaly_detector.py and
-    notifications.py need no changes.
+    Same signature regardless of which path generates the summary —
+    anomaly_detector.py and notifications.py need no changes either way.
 
-    Uses live Vertex AI only when USE_LIVE_VERTEX_AI=true. Otherwise, or
-    if the live call fails for any reason, falls back to a templated
-    summary so the pipeline never breaks on an API error.
+    Uses the rule-based generator by default. If USE_LIVE_VERTEX_AI=true,
+    attempts a real Vertex AI call first and falls back to the rule-based
+    generator automatically if that call fails for any reason.
     """
     if not USE_LIVE_VERTEX_AI:
-        return _templated_fallback(
+        return _rule_based_summary(
             service_name, anomaly_type, current_value, baseline_value, z_score
         )
 
@@ -110,7 +118,7 @@ def generate_incident_summary(
         response = model.generate_content(prompt)
         return response.text.strip()
     except Exception as e:
-        print(f"Vertex AI call failed, using templated fallback: {e}")
-        return _templated_fallback(
+        print(f"Vertex AI call failed, using rule-based generator: {e}")
+        return _rule_based_summary(
             service_name, anomaly_type, current_value, baseline_value, z_score
         )
