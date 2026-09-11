@@ -11,6 +11,16 @@ services:
       --host-port=0.0.0.0:8085
       --project=local-dev-project
 
+  # Dashboard with Demo Data (No GCP credentials needed)
+  dashboard:
+    build: 
+      context: ./app/dashboard
+    container_name: incident-dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - USE_DEMO_DATA=true
+
   # Placeholder for the sample log-generating app (Person B).
   # Uncomment and fill in once the app has a Dockerfile.
   # sample-app:
