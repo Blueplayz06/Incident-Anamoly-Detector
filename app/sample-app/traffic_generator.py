@@ -38,12 +38,15 @@ WEIGHTS = [0.3, 0.15, 0.55]
 def get_auth_headers() -> dict:
     """Only needed when hitting the real Cloud Run URL, which requires
     authentication under this org's security policy (public access is
-    blocked). Fetches a fresh identity token via gcloud."""
+    blocked). Fetches a fresh identity token via gcloud, scoped to this
+    specific service's audience — an unscoped token gets rejected with
+    401 even though it looks superficially valid."""
     if not IS_REMOTE:
         return {}
     try:
         token = subprocess.check_output(
-            ["gcloud", "auth", "print-identity-token"], text=True
+            ["gcloud", "auth", "print-identity-token", f"--audiences={BASE_URL}"],
+            text=True,
         ).strip()
         return {"Authorization": f"Bearer {token}"}
     except subprocess.CalledProcessError as e:
