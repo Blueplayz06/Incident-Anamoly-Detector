@@ -52,7 +52,7 @@ resource "google_logging_project_sink" "app_log_sink" {
   project     = var.project_id
   destination = "pubsub.googleapis.com/${google_pubsub_topic.log_ingestion.id}"
 
-  filter = "resource.type=\"cloud_run_revision\" OR resource.type=\"cloud_function\""
+  filter = "resource.type=\"cloud_run_revision\" AND jsonPayload.service_name:*"
 
   unique_writer_identity = true
 }
