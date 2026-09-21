@@ -47,12 +47,12 @@ resource "google_pubsub_subscription" "log_ingestion_dlq_sub" {
 # app's actual log format/resource type is known, so we're not exporting
 # unrelated project logs into the pipeline.
 
-resource "google_logging_project_sink" "app_log_sink" {
+/*resource "google_logging_project_sink" "app_log_sink" {
   name        = "app-log-to-pubsub-sink"
   project     = var.project_id
   destination = "pubsub.googleapis.com/${google_pubsub_topic.log_ingestion.id}"
 
-  filter = "resource.type=\"cloud_run_revision\" AND jsonPayload.service_name:*"
+  filter = "resource.type=\"cloud_run_revision\" AND jsonPayload.service_name:*"  
 
   unique_writer_identity = true
 }
@@ -66,3 +66,4 @@ resource "google_pubsub_topic_iam_member" "sink_publisher" {
   role    = "roles/pubsub.publisher"
   member  = google_logging_project_sink.app_log_sink.writer_identity
 }
+*/
