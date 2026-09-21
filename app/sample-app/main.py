@@ -52,7 +52,8 @@ def publish_log(service_name: str, endpoint: str, method: str,
         log_entry["user_id"] = user_id
 
     data = json.dumps(log_entry).encode("utf-8")
-    publisher.publish(topic_path, data)
+    future = publisher.publish(topic_path, data)
+    future.result()
     return log_entry
 
 
