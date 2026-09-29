@@ -20,3 +20,5 @@ dist/
 
 # OS
 .DS_Store
+app/detector-service/incidents_store.py
+app/detector-service/vertex_summary.py
