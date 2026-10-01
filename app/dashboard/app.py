@@ -194,7 +194,7 @@ if not minutes.empty:
     with right:
         st.subheader("Status codes")
         if not status.empty:
-            st.plotly_chart(style(px.bar(status, x="status_code", y="n")))
+            st.plotly_chart(style(px.bar(status, x="status_code", y="n").update_xaxes(type="category")))
 
     st.subheader("Services")
     if not services.empty:
