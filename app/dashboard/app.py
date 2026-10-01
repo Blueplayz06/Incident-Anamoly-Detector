@@ -28,6 +28,11 @@ COLORS = {
 # --- Settings & State ---
 PROJECT_ID = os.environ.get("PROJECT_ID") 
 DATASET_ID = "incident_logs"
+LOGS = f"`{PROJECT_ID}.{DATASET_ID}.app_logs`"
+INCIDENTS = f"`{PROJECT_ID}.{DATASET_ID}.incidents`"
+STALE_AFTER_SECONDS = 300
+
+st.set_page_config(page_title="Incident Anomaly Dashboard", page_icon="🚨", layout="wide")
 
 with st.sidebar:
     st.header("⚙️ Settings")
